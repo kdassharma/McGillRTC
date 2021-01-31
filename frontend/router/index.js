@@ -3,6 +3,7 @@ import Router from 'vue-router'
 // import store from '../src/store/index'
 
 import Home from '../src/pages/Home.vue'
+import VideoChat from '../src/pages/VideoChat.vue'
 
 
 Vue.use(Router)
@@ -14,11 +15,11 @@ const router = new Router({
             name: 'Home',
             component: Home
         },
-        // {
-        //     path: '/authenticate',
-        //     name: 'Authenticate',
-        //     component: Authenticate,
-        // }
+        {
+            path: '/chat',
+            name: 'VideoChat',
+            component: VideoChat,
+        }
     ]
 });
 
