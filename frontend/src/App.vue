@@ -1,30 +1,21 @@
 <template>
   <div id="app">
-    <img alt="McGill logo" src="./assets/McGill_logo.png">
-    <Home msg="Welcome to Voice Chat McGill!"/>
+     <router-view></router-view>
   </div>
 </template>
 
 <script>
-import Home from './components/Home.vue'
-import 'bootstrap/dist/css/bootstrap.css'
-import 'bootstrap-vue/dist/bootstrap-vue.css'
+// import 'bootstrap/dist/css/bootstrap.css'
+// import 'bootstrap-vue/dist/bootstrap-vue.css'
 
 export default {
   name: 'App',
-  components: {
-    Home
-  }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+body,html {
+    margin: 0;
+    padding: 0;
 }
 </style>
