@@ -13,7 +13,7 @@
             </b-col>
         </b-row>
         <!-- Videos -->
-        <div id="videos">
+        <div id="videos" v-if="isInRoom || isMediaOpen">
             <video id="localVideo" muted autoplay playsinline></video>
             <video id="remoteVideo" autoplay playsinline></video>
         </div>   
