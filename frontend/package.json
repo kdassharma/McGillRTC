@@ -11,7 +11,11 @@
     "@material/textfield": "^9.0.0",
     "bootstrap-vue": "^2.21.2",
     "core-js": "^3.6.5",
+<<<<<<< HEAD
     "material-components-web": "^9.0.0",
+=======
+    "firebase": "^8.2.5",
+>>>>>>> ce52ee44bc8b9fa34b84853778c9a3214d071b3a
     "vue": "^2.6.11",
     "vue-hot-reload-api": "^2.3.4",
     "vue-router": "^3.5.1"
