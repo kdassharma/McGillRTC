@@ -2,29 +2,31 @@
   <div class="bg-primary vh-100">  
     <b-container class="d-flex flex-column" align="center">
         <!-- Heading -->
-        <b-row class="mt-5">
+        <b-row class="my-2">
             <b-col>
                 <h1 class="text-light">Welcome to McGillRTC!</h1>
             </b-col>
         </b-row>
-        <b-row class="mt-4" v-if="isInRoom">
+        <b-row class="my-2" v-if="isInRoom">
             <b-col>
                 <h5 class="text-light">Current room is {{ roomId }} - You are the caller!</h5>
             </b-col>
         </b-row>
-        <!-- Videos -->
-        <div id="videos" v-if="isInRoom || isMediaOpen">
-            <video id="localVideo" muted autoplay playsinline></video>
-            <video id="remoteVideo" autoplay playsinline></video>
-        </div>   
         <!-- Buttons -->
-        <b-row class="mt-4" id="buttons">
+        <b-row class="my-2" id="buttons">
             <b-col>
                 <b-button pill class="mr-4" variant="success" v-on:click="openUserMedia" v-if="!isMediaOpen">Open Camera & Microphone</b-button>
                 <b-button pill class="mx-2" variant="warning" v-on:click="createRoom" v-if="!isInRoom">Create Room</b-button>
                 <b-button pill class="mx-2" variant="warning" v-on:click="joinRoom" v-if="!isInRoom">Join Room</b-button>
-                <b-button pill class="ml-4" variant="danger" v-if="isInRoom">Hangup</b-button>
+                <b-button pill class="ml-4" variant="danger" v-if="isInRoom" v-on:click="hangUp">Hangup</b-button>
             </b-col>
+        </b-row>        
+        <!-- Videos -->
+        <b-row class="mt-5">
+          <div class="d-flex" id="videos" v-if="isInRoom || isMediaOpen">
+              <video id="localVideo" class="d-flex" muted autoplay playsinline></video>
+              <video id="remoteVideo" class="d-flex" autoplay playsinline></video>
+          </div>   
         </b-row>
         <!-- Join Room Modal -->
         <b-row>
@@ -208,6 +210,8 @@ export default {
             }
           });
         });
+
+        this.isInRoom = true;
         // Listening for remote ICE candidates above
       }
     },
@@ -254,9 +258,11 @@ export default {
           await candidate.ref.delete();
         });
         await roomRef.delete();
+        this.roomId = ""
       }
 
       this.isInRoom = false; 
+      this.isMediaOpen = false;
     },
     registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener('icegatheringstatechange', () => {
