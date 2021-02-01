@@ -37,7 +37,7 @@
                         <b-button pill variant="primary" v-on:click="joinRoomById(typedRoomId)">Join!</b-button>
                     </b-col>
                 </b-row>
-            </b-modal>   
+            </b-modal>
         </b-row>     
     </b-container>
   </div>
@@ -147,8 +147,9 @@ export default {
       this.isInRoom = true; 
       // Listen for remote ICE candidates above
     },
-    joinRoomById: async function() {
-      const roomRef = db.collection('rooms').doc(this.roomId);
+    joinRoomById: async function(roomId) {
+      console.log("This is room id:" + roomId);
+      const roomRef = db.collection('rooms').doc(roomId);
       const roomSnapshot = await roomRef.get();
       console.log('Got room:', roomSnapshot.exists);
 
