@@ -9,7 +9,7 @@
         </b-row>
         <b-row class="mt-4" v-if="isInRoom">
             <b-col>
-                <h5 class="text-light">Room ID#: {{ roomId }}</h5>
+                <h5 class="text-light">Current room is {{ roomId }} - You are the caller!</h5>
             </b-col>
         </b-row>
         <!-- Videos -->
@@ -28,13 +28,13 @@
         </b-row>
         <!-- Join Room Modal -->
         <b-row>
-            <b-modal ref="my-modal" hide-footer title="Join Room">
+            <b-modal ref="join-room-modal" hide-footer title="Join Room">
                 <b-row>
                     <b-col class="col-10 pr-0">
                         <b-form-input v-model="typedRoomId" placeholder="Paste Room ID"></b-form-input>
                     </b-col>
                     <b-col class="col-2">
-                        <b-button pill variant="primary">Join!</b-button>
+                        <b-button pill variant="primary" v-on:click="joinRoomById(typedRoomId)">Join!</b-button>
                     </b-col>
                 </b-row>
             </b-modal>   
@@ -65,6 +65,7 @@ export default {
       localStream: null,
       remoteStream: null,
       roomDialog: null,
+      typedRoomId: null,
       roomId: null,
       isInRoom: false,
       isMediaOpen: false,
@@ -72,8 +73,6 @@ export default {
   },
   methods: {
     createRoom: async function () {
-      // document.querySelector('#createBtn').disabled = true;
-      // document.querySelector('#joinBtn').disabled = true;
       const roomRef = await db.collection('rooms').doc();
 
       console.log('Create this.peerConnection with configuration: ', this.configuration);
@@ -110,12 +109,11 @@ export default {
         },
       };
       await roomRef.set(roomWithOffer);
+      
       this.roomId = roomRef.id;
       console.log(`New room created with SDP offer. Room ID: ${roomRef.id}`);
-      // document.querySelector(
-      //     '#currentRoom').innerText = `Current room is ${roomRef.id} - You are the caller!`;
-      // Code for creating a room above
 
+      // Code for creating a room above
       this.peerConnection.addEventListener('track', event => {
         console.log('Got remote track:', event.streams[0]);
         event.streams[0].getTracks().forEach(track => {
@@ -145,10 +143,12 @@ export default {
           }
         });
       });
+
+      this.isInRoom = true; 
       // Listen for remote ICE candidates above
     },
-    joinRoomById: async function(roomId) {
-      const roomRef = db.collection('rooms').doc(`${roomId}`);
+    joinRoomById: async function() {
+      const roomRef = db.collection('rooms').doc(this.roomId);
       const roomSnapshot = await roomRef.get();
       console.log('Got room:', roomSnapshot.exists);
 
@@ -211,22 +211,21 @@ export default {
       }
     },
     openUserMedia: async function() {
-      const stream = await navigator.mediaDevices.getUserMedia(
-      {video: true, audio: true});
+      this.isMediaOpen = true;
+
+      const stream = await navigator.mediaDevices.getUserMedia( { video: true, audio: true } );
+      
       document.querySelector('#localVideo').srcObject = stream;
-      this.localStreamlocalStream = stream;
+      this.localStream = stream;
+      
       this.remoteStream = new MediaStream();
       document.querySelector('#remoteVideo').srcObject = this.remoteStream;
 
       console.log('Stream:', document.querySelector('#localVideo').srcObject);
-      document.querySelector('#cameraBtn').disabled = true;
-      document.querySelector('#joinBtn').disabled = false;
-      document.querySelector('#createBtn').disabled = false;
-      document.querySelector('#hangupBtn').disabled = false;
     },
-    
     hangUp: async function() {
       const tracks = document.querySelector('#localVideo').srcObject.getTracks();
+      
       tracks.forEach(track => {
         track.stop();
       });
@@ -241,12 +240,7 @@ export default {
 
       document.querySelector('#localVideo').srcObject = null;
       document.querySelector('#remoteVideo').srcObject = null;
-      document.querySelector('#cameraBtn').disabled = false;
-      document.querySelector('#joinBtn').disabled = true;
-      document.querySelector('#createBtn').disabled = true;
-      document.querySelector('#hangupBtn').disabled = true;
-      document.querySelector('#currentRoom').innerText = '';
-
+      
       // Delete room on hangup
       if (this.roomId) {
         const roomRef = db.collection('rooms').doc(this.roomId);
@@ -261,8 +255,7 @@ export default {
         await roomRef.delete();
       }
 
-      document.location.reload(true);
-      
+      this.isInRoom = false; 
     },
     registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener('icegatheringstatechange', () => {
@@ -283,7 +276,7 @@ export default {
       });
     },
     joinRoom: function () {
-      this.$refs["my-modal"].show()    
+      this.$refs["join-room-modal"].show()    
     }
 
   },
