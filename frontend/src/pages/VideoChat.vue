@@ -22,10 +22,10 @@
             </b-col>
         </b-row>        
         <!-- Videos -->
-        <b-row class="mt-5">
-          <div class="d-flex" id="videos" v-if="isInRoom || isMediaOpen">
-              <video id="localVideo" class="d-flex" muted autoplay playsinline></video>
-              <video id="remoteVideo" class="d-flex" autoplay playsinline></video>
+        <b-row class="mt-5 w-65">
+          <div class="d-flex justify-content-center" id="videos" v-if="isInRoom || isMediaOpen">
+              <video id="localVideo" class="d-flex mr-5 h-100 w-50" muted autoplay playsinline></video>
+              <video id="remoteVideo" class="d-flex ml-5 h-100 w-50" autoplay playsinline></video>
           </div>   
         </b-row>
         <!-- Join Room Modal -->
