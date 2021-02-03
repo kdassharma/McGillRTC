@@ -51,7 +51,14 @@
             v-on:click="hangUp"
             >Hangup</b-button
           >
-        </b-col>
+          <b-button
+            pill
+            class="ml-4"
+            variant="danger"
+            v-on:click="signOut"
+            >Sign out</b-button
+          >
+      </b-col>
       </b-row>
       <!-- Videos -->
       <b-row class="mt-5 w-65">
@@ -102,7 +109,7 @@
 
 <script>
 import { db } from "../firebase";
-
+import { auth } from "../firebase";
 export default {
   name: "VideoChat",
   data: function () {
@@ -217,7 +224,7 @@ export default {
     },
     joinRoomById: async function (roomId) {
       console.log("This is room id:" + roomId);
-      const roomRef = db.collection("rooms").doc(roomId);
+      const roomRef = await db.collection("rooms").doc(roomId);
       const roomSnapshot = await roomRef.get();
       console.log("Got room:", roomSnapshot.exists);
 
@@ -331,7 +338,7 @@ export default {
 
       // Delete room on hangup
       if (this.roomId) {
-        const roomRef = db.collection("rooms").doc(this.roomId);
+        const roomRef = await db.collection("rooms").doc(this.roomId);
         const calleeCandidates = await roomRef
           .collection("calleeCandidates")
           .get();
@@ -378,7 +385,28 @@ export default {
     joinRoom: function () {
       this.$refs["join-room-modal"].show();
     },
+    signOut: async function() {
+      auth.signOut().then(() => {
+        // auth.currentUser = null;
+        this.$router.push({ name: 'Home'});
+      }).catch((error) => {
+        console.log(error);
+      });
+    },
+    authorise: async function () {
+      // var user = this.$route.params.sharedData;
+      var user = auth.currentUser;
+      if (user == null) {
+        this.$router.push({ name: 'ErrorPage' });
+      } else { 
+        console.log(user.email);
+        console.log("Authenticated");
+      }
+    }
   },
+  beforeMount() {
+    this.authorise();
+  }
 };
 </script>
   

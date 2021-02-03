@@ -2,3 +2,4 @@
 .DS_Store
 frontend/package-lock.json
 *.code-workspace
+*.lock

@@ -22,8 +22,8 @@
                           </b-col>
                           <b-col class="px-1">
                             <b-form-input
-                              v-model="username"
-                              placeholder="Username"
+                              v-model="email"
+                              placeholder="Email address"
                             ></b-form-input>
                           </b-col>
                         </b-row>
@@ -48,9 +48,12 @@
                 </b-row>
                 <b-row class="justify-content-center w-75">
                   <b-col class="text-center">
-                    <b-button pill variant="warning" v-on:click="createAccount"
-                      >Create Account</b-button
-                    >
+                    <b-button pill variant="warning" v-on:click="createAccount">
+                      Create Account</b-button>
+                  </b-col>
+                  <b-col class="text-center">
+                    <b-button pill variant="warning" v-on:click="login">
+                      Login</b-button>
                   </b-col>
                 </b-row>
               </b-jumbotron>
@@ -70,38 +73,36 @@
 </template>
 
 <script>
-// import { db } from "../firebase";
+import {auth} from "../firebase";
 
 export default {
   name: "Home",
   data: function () {
     return {
-      username: "",
+      email: "",
       password: "",
     };
   },
   methods: {
     createAccount: function () {
-      // TODO: Upon clicking this function, the user's view should switch
-      //       to input fields that let them information to be associated with
-      //       an account. The function should then add the user to the firebase
-      //       collection like the example below.
-
-      // db.collection("users")
-      //   .add({
-      //     name: "Tokyo",
-      //     country: "Japan",
-      //   })
-      //   .then(function (docRef) {
-      //     console.log("Document written with ID: ", docRef);
-      //   })
-      //   .catch(function (error) {
-      //     console.error("Error adding document: ", error);
-      //   });
+      auth.createUserWithEmailAndPassword(this.email, this.password)
+      .then((userCredential) => {
+        this.$route.params.sharedData = userCredential;
+        this.$router.push({ name: 'VideoChat' });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
     },
     login: function () {
-      // TODO: Function should be called when the user clicks the login button. This
-      //       should take in their info and authorize it with firebase
+      auth.signInWithEmailAndPassword(this.email, this.password)
+        .then((userCredential) => {
+          this.$route.params.sharedData = userCredential;
+          this.$router.push({ name: 'VideoChat' }); 
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     },
   },
 };
