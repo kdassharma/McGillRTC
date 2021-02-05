@@ -51,21 +51,17 @@
             v-on:click="hangUp"
             >Hangup</b-button
           >
-          <b-button
-            pill
-            class="ml-4"
-            variant="danger"
-            v-on:click="signOut"
+          <b-button pill class="ml-4" variant="danger" v-on:click="signOut"
             >Sign out</b-button
           >
-      </b-col>
+        </b-col>
       </b-row>
       <!-- Videos -->
       <b-row class="mt-5 w-65">
         <div
           class="d-flex justify-content-center"
           id="videos"
-          v-if="isInRoom || isMediaOpen"
+          v-if="isMediaOpen"
         >
           <video
             id="localVideo"
@@ -76,7 +72,8 @@
           ></video>
           <video
             id="remoteVideo"
-            class="d-flex ml-5 h-100 w-50"
+            :class="{ 'd-flex': isInRoom, 'd-none': !isInRoom }"
+            class="ml-5 h-100 w-50"
             autoplay
             playsinline
           ></video>
@@ -112,7 +109,7 @@ import { db } from "../firebase";
 import { auth } from "../firebase";
 export default {
   name: "VideoChat",
-  data: function () {
+  data: function() {
     return {
       configuration: {
         iceServers: [
@@ -136,7 +133,7 @@ export default {
     };
   },
   methods: {
-    createRoom: async function () {
+    createRoom: async function() {
       const roomRef = await db.collection("rooms").doc();
 
       console.log(
@@ -222,7 +219,7 @@ export default {
       this.isInRoom = true;
       // Listen for remote ICE candidates above
     },
-    joinRoomById: async function (roomId) {
+    joinRoomById: async function(roomId) {
       console.log("This is room id:" + roomId);
       const roomRef = await db.collection("rooms").doc(roomId);
       const roomSnapshot = await roomRef.get();
@@ -297,10 +294,12 @@ export default {
 
         this.isInRoom = true;
         this.roomId = roomId;
+
+        this.$refs["join-room-modal"].hide();
         // Listening for remote ICE candidates above
       }
     },
-    openUserMedia: async function () {
+    openUserMedia: async function() {
       this.isMediaOpen = true;
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -316,7 +315,7 @@ export default {
 
       console.log("Stream:", document.querySelector("#localVideo").srcObject);
     },
-    hangUp: async function () {
+    hangUp: async function() {
       const tracks = document
         .querySelector("#localVideo")
         .srcObject.getTracks();
@@ -358,7 +357,7 @@ export default {
       this.isInRoom = false;
       this.isMediaOpen = false;
     },
-    registerPeerConnectionListeners: function () {
+    registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener("icegatheringstatechange", () => {
         console.log(
           `ICE gathering state changed: ${this.peerConnection.iceGatheringState}`
@@ -368,6 +367,13 @@ export default {
         console.log(
           `Connection state change: ${this.peerConnection.connectionState}`
         );
+
+        if (
+          ["disconnected", "failed"].includes(
+            this.peerConnection.connectionState
+          )
+        )
+          this.isInRoom = false;
       });
 
       this.peerConnection.addEventListener("signalingstatechange", () => {
@@ -382,39 +388,40 @@ export default {
         );
       });
     },
-    joinRoom: function () {
+    joinRoom: function() {
       this.$refs["join-room-modal"].show();
     },
     signOut: async function() {
-      auth.signOut().then(() => {
-        // auth.currentUser = null;
-        this.$router.push({ name: 'Home'});
-      }).catch((error) => {
-        console.log(error);
-      });
+      auth
+        .signOut()
+        .then(() => {
+          // auth.currentUser = null;
+          this.$router.push({ name: "Home" });
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     },
-    authorise: async function () {
+    authorise: async function() {
       // var user = this.$route.params.sharedData;
       var user = auth.currentUser;
       if (user == null) {
-        this.$router.push({ name: 'ErrorPage' });
-      } else { 
+        this.$router.push({ name: "ErrorPage" });
+      } else {
         console.log(user.email);
         console.log("Authenticated");
       }
-    }
+    },
   },
   beforeMount() {
-    this.authorise();
-  }
+    // this.authorise();
+  },
 };
 </script>
-  
+
 <style>
 button:disabled {
   cursor: not-allowed;
   pointer-events: all !important;
 }
 </style>
-
-
