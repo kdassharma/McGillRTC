@@ -402,8 +402,9 @@ export default {
           console.log(error);
         });
     },
-    authorise: async function() {
+    authorise: function() {
       // var user = this.$route.params.sharedData;
+
       var user = auth.currentUser;
       if (user == null) {
         this.$router.push({ name: "ErrorPage" });
