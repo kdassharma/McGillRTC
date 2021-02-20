@@ -106,7 +106,7 @@
 
 <script>
 import { db } from "../firebase";
-import { auth } from "../firebase";
+// import { auth } from "../firebase";
 export default {
   name: "VideoChat",
   data: function() {
@@ -392,30 +392,9 @@ export default {
       this.$refs["join-room-modal"].show();
     },
     signOut: async function() {
-      auth
-        .signOut()
-        .then(() => {
-          // auth.currentUser = null;
-          this.$router.push({ name: "Home" });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+      await this.$store.dispatch("logout");
+      this.$router.push({ name: "Home" });
     },
-    authorise: function() {
-      // var user = this.$route.params.sharedData;
-
-      var user = auth.currentUser;
-      if (user == null) {
-        this.$router.push({ name: "ErrorPage" });
-      } else {
-        console.log(user.email);
-        console.log("Authenticated");
-      }
-    },
-  },
-  beforeMount() {
-    // this.authorise();
   },
 };
 </script>

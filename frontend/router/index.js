@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-// import store from '../src/store/index'
+import store from '../store/index'
 
 import Home from '../src/pages/Home.vue'
 import VideoChat from '../src/pages/VideoChat.vue'
@@ -13,11 +13,25 @@ const router = new Router({
     routes: [
         {
             path: '/',
+            beforeEnter: (to, from, next) => {
+                if (!store.getters.getIsSignedIn) {
+                    next();
+                } else {
+                    next("/chat");
+                }
+            },
             name: 'Home',
-            component: Home
+            component: Home,
         },
         {
             path: '/chat',
+            beforeEnter: (to, from, next) => {
+                if (!store.getters.getIsSignedIn) {
+                    next("/");
+                } else {
+                    next();
+                }
+            },            
             name: 'VideoChat',
             component: VideoChat,
         },

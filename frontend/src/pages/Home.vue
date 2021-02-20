@@ -75,7 +75,7 @@
 </template>
 
 <script>
-import { auth } from "../firebase";
+// import { auth } from "../firebase";
 
 export default {
   name: "Home",
@@ -86,27 +86,31 @@ export default {
     };
   },
   methods: {
-    createAccount: function() {
-      auth
-        .createUserWithEmailAndPassword(this.email, this.password)
-        .then((userCredential) => {
-          this.$route.params.sharedData = userCredential;
-          this.$router.push({ name: "VideoChat" });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    createAccount: async function() {
+      let registrationDetails = {
+        email: this.email,
+        password: this.password,
+      };
+
+      await this.$store.dispatch("register", registrationDetails);
+      let isSignedIn = this.$store.getters.getIsSignedIn;
+
+      if (isSignedIn) {
+        this.$router.push({ name: "VideoChat" });
+      }
     },
-    login: function() {
-      auth
-        .signInWithEmailAndPassword(this.email, this.password)
-        .then((userCredential) => {
-          this.$route.params.sharedData = userCredential;
-          this.$router.push({ name: "VideoChat" });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    login: async function() {
+      let loginDetails = {
+        email: this.email,
+        password: this.password,
+      };
+
+      await this.$store.dispatch("login", loginDetails);
+      let isSignedIn = this.$store.getters.getIsSignedIn;
+
+      if (isSignedIn) {
+        this.$router.push({ name: "VideoChat" });
+      }
     },
   },
 };
