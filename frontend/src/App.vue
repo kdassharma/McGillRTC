@@ -11,6 +11,9 @@ export default {
 </script>
 
 <style>
+body {
+  overflow: hidden;
+}
 body,
 html {
   margin: 0;

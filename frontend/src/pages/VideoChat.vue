@@ -30,9 +30,9 @@
             class="mx-2"
             variant="warning"
             :disabled="!isMediaOpen"
-            v-on:click="createRoom"
+            v-on:click="showScheduleModal"
             v-if="!isInRoom"
-            >Create Room</b-button
+            >Schedule</b-button
           >
           <b-button
             pill
@@ -51,6 +51,9 @@
             v-on:click="hangUp"
             >Hangup</b-button
           >
+          <b-button pill class="ml-4" variant="danger" v-on:click="signOut"
+            >Sign out</b-button
+          >
         </b-col>
       </b-row>
       <!-- Videos -->
@@ -58,7 +61,7 @@
         <div
           class="d-flex justify-content-center"
           id="videos"
-          v-if="isInRoom || isMediaOpen"
+          v-if="isMediaOpen"
         >
           <video
             id="localVideo"
@@ -69,7 +72,8 @@
           ></video>
           <video
             id="remoteVideo"
-            class="d-flex ml-5 h-100 w-50"
+            :class="{ 'd-flex': isInRoom, 'd-none': !isInRoom }"
+            class="ml-5 h-100 w-50"
             autoplay
             playsinline
           ></video>
@@ -96,16 +100,37 @@
           </b-row>
         </b-modal>
       </b-row>
+      <!-- Schedule modal -->
+      <b-row>
+        <b-modal ref="schedule-modal" hide-footer title="Schedule Time">
+          <b-row>
+            <b-col class="col-10 pr-0">
+              <b-form-input
+                v-model="scheduledTime"
+                placeholder="Select a time in HH:MM format"
+              ></b-form-input>
+            </b-col>
+            <b-col class="col-2">
+              <b-button
+                pill
+                variant="primary"
+                v-on:click="schedule(scheduledTime)"
+                >Schedule!</b-button
+              >
+            </b-col>
+          </b-row>
+        </b-modal>
+      </b-row>
     </b-container>
   </div>
 </template>
 
 <script>
 import { db } from "../firebase";
-
+// import { auth } from "../firebase";
 export default {
   name: "VideoChat",
-  data: function () {
+  data: function() {
     return {
       configuration: {
         iceServers: [
@@ -126,10 +151,11 @@ export default {
       roomId: null,
       isInRoom: false,
       isMediaOpen: false,
+      scheduledTime: null,
     };
   },
   methods: {
-    createRoom: async function () {
+    createRoom: async function() {
       const roomRef = await db.collection("rooms").doc();
 
       console.log(
@@ -171,6 +197,8 @@ export default {
       await roomRef.set(roomWithOffer);
 
       this.roomId = roomRef.id;
+      await db.collection('users').doc(this.$store.getters.getUser.id).set({room: roomRef.id}, { merge: true });
+
       console.log(`New room created with SDP offer. Room ID: ${roomRef.id}`);
 
       // Code for creating a room above
@@ -215,9 +243,9 @@ export default {
       this.isInRoom = true;
       // Listen for remote ICE candidates above
     },
-    joinRoomById: async function (roomId) {
+    joinRoomById: async function(roomId) {
       console.log("This is room id:" + roomId);
-      const roomRef = db.collection("rooms").doc(roomId);
+      const roomRef = await db.collection("rooms").doc(roomId);
       const roomSnapshot = await roomRef.get();
       console.log("Got room:", roomSnapshot.exists);
 
@@ -290,10 +318,44 @@ export default {
 
         this.isInRoom = true;
         this.roomId = roomId;
+
+        this.$refs["join-room-modal"].hide();
         // Listening for remote ICE candidates above
       }
     },
-    openUserMedia: async function () {
+    schedule: async function(time) {
+      
+      const usersCollection = await db.collection('users');
+
+      const snapshot = await usersCollection.where('scheduledTime', '==', time).get();
+      var match = null;
+      var found = false;
+
+      if (snapshot.empty) {
+        console.log('No users scheduled for this time.');
+        this.createRoom();
+        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:false}, { merge: true });
+      }  
+      else { 
+        snapshot.forEach(doc => {
+          if (!found && doc.id != this.$store.getters.getUser.id && !doc.data().isMatched) {
+            match = doc.data();
+            found=true;
+          }
+          console.log(match.room);
+          // console.log(doc.id, '=>', doc.data());
+        });
+
+        await usersCollection.doc(match.id).set({isMatched:true}, { merge: true });
+        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:true}, { merge: true });
+      }
+
+      await usersCollection.doc(this.$store.getters.getUser.id).set({scheduledTime: time}, { merge: true });
+
+      this.$refs["schedule-modal"].hide();
+
+    },
+    openUserMedia: async function() {
       this.isMediaOpen = true;
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -309,7 +371,7 @@ export default {
 
       console.log("Stream:", document.querySelector("#localVideo").srcObject);
     },
-    hangUp: async function () {
+    hangUp: async function() {
       const tracks = document
         .querySelector("#localVideo")
         .srcObject.getTracks();
@@ -331,7 +393,7 @@ export default {
 
       // Delete room on hangup
       if (this.roomId) {
-        const roomRef = db.collection("rooms").doc(this.roomId);
+        const roomRef = await db.collection("rooms").doc(this.roomId);
         const calleeCandidates = await roomRef
           .collection("calleeCandidates")
           .get();
@@ -351,7 +413,7 @@ export default {
       this.isInRoom = false;
       this.isMediaOpen = false;
     },
-    registerPeerConnectionListeners: function () {
+    registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener("icegatheringstatechange", () => {
         console.log(
           `ICE gathering state changed: ${this.peerConnection.iceGatheringState}`
@@ -361,6 +423,13 @@ export default {
         console.log(
           `Connection state change: ${this.peerConnection.connectionState}`
         );
+
+        if (
+          ["disconnected", "failed"].includes(
+            this.peerConnection.connectionState
+          )
+        )
+          this.isInRoom = false;
       });
 
       this.peerConnection.addEventListener("signalingstatechange", () => {
@@ -375,18 +444,23 @@ export default {
         );
       });
     },
-    joinRoom: function () {
+    joinRoom: function() {
       this.$refs["join-room-modal"].show();
+    },
+    showScheduleModal: function() {
+      this.$refs["schedule-modal"].show();
+    },
+    signOut: async function() {
+      await this.$store.dispatch("logout");
+      this.$router.push({ name: "Home" });
     },
   },
 };
 </script>
-  
+
 <style>
 button:disabled {
   cursor: not-allowed;
   pointer-events: all !important;
 }
 </style>
-
-
