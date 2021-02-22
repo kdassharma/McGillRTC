@@ -46,6 +46,14 @@
           <b-button
             pill
             class="ml-4"
+            variant="success"
+            v-if="isInRoom"
+            v-on:click="copyRoomId"
+            >Copy Join Link</b-button
+          >
+          <b-button
+            pill
+            class="ml-4"
             variant="danger"
             v-if="isInRoom"
             v-on:click="hangUp"
@@ -154,6 +162,13 @@ export default {
       scheduledTime: null,
     };
   },
+  mounted: function() {
+    let roomId = this.$route.query.id;
+    if (roomId) {
+      this.openUserMedia();
+      this.joinRoomById(roomId);
+    }
+  },
   methods: {
     createRoom: async function() {
       const roomRef = await db.collection("rooms").doc();
@@ -197,7 +212,10 @@ export default {
       await roomRef.set(roomWithOffer);
 
       this.roomId = roomRef.id;
-      await db.collection('users').doc(this.$store.getters.getUser.id).set({room: roomRef.id}, { merge: true });
+      await db
+        .collection("users")
+        .doc(this.$store.getters.getUser.id)
+        .set({ room: roomRef.id }, { merge: true });
 
       console.log(`New room created with SDP offer. Room ID: ${roomRef.id}`);
 
@@ -324,36 +342,48 @@ export default {
       }
     },
     schedule: async function(time) {
-      
-      const usersCollection = await db.collection('users');
+      const usersCollection = await db.collection("users");
 
-      const snapshot = await usersCollection.where('scheduledTime', '==', time).get();
+      const snapshot = await usersCollection
+        .where("scheduledTime", "==", time)
+        .get();
       var match = null;
       var found = false;
 
       if (snapshot.empty) {
-        console.log('No users scheduled for this time.');
+        console.log("No users scheduled for this time.");
         this.createRoom();
-        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:false}, { merge: true });
-      }  
-      else { 
-        snapshot.forEach(doc => {
-          if (!found && doc.id != this.$store.getters.getUser.id && !doc.data().isMatched) {
+        await usersCollection
+          .doc(this.$store.getters.getUser.id)
+          .set({ isMatched: false }, { merge: true });
+      } else {
+        snapshot.forEach(async (doc) => {
+          if (
+            !found &&
+            doc.id != this.$store.getters.getUser.id &&
+            !doc.data().isMatched
+          ) {
             match = doc.data();
-            found=true;
+            found = true;
           }
-          console.log(match.room);
+          if (found) {
+            console.log(match.room);
+            await usersCollection
+              .doc(match.id)
+              .set({ isMatched: true }, { merge: true });
+            await usersCollection
+              .doc(this.$store.getters.getUser.id)
+              .set({ isMatched: true }, { merge: true });
+          }
           // console.log(doc.id, '=>', doc.data());
         });
-
-        await usersCollection.doc(match.id).set({isMatched:true}, { merge: true });
-        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:true}, { merge: true });
       }
 
-      await usersCollection.doc(this.$store.getters.getUser.id).set({scheduledTime: time}, { merge: true });
+      await usersCollection
+        .doc(this.$store.getters.getUser.id)
+        .set({ scheduledTime: time }, { merge: true });
 
       this.$refs["schedule-modal"].hide();
-
     },
     openUserMedia: async function() {
       this.isMediaOpen = true;
@@ -370,6 +400,19 @@ export default {
       document.querySelector("#remoteVideo").srcObject = this.remoteStream;
 
       console.log("Stream:", document.querySelector("#localVideo").srcObject);
+    },
+    closeUserMedia: async function() {
+      this.isMediaOpen = false;
+
+      this.localStream.getTracks().forEach(function(track) {
+        track.stop();
+      });
+
+      document.querySelector("#localVideo").srcObject = undefined;
+      this.localStream = undefined;
+
+      this.remoteStream = undefined;
+      document.querySelector("#remoteVideo").srcObject = undefined;
     },
     hangUp: async function() {
       const tracks = document
@@ -412,6 +455,7 @@ export default {
 
       this.isInRoom = false;
       this.isMediaOpen = false;
+      this.closeUserMedia();
     },
     registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener("icegatheringstatechange", () => {
@@ -453,6 +497,28 @@ export default {
     signOut: async function() {
       await this.$store.dispatch("logout");
       this.$router.push({ name: "Home" });
+      this.closeUserMedia();
+    },
+    copyRoomId() {
+      var Url =
+        window.location.origin + this.$route.path + "?id=" + this.roomId;
+      const el = document.createElement("textarea");
+      el.value = Url;
+      el.setAttribute("readonly", "");
+      el.style.position = "absolute";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+      const selected =
+        document.getSelection().rangeCount > 0
+          ? document.getSelection().getRangeAt(0)
+          : false;
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      if (selected) {
+        document.getSelection().removeAllRanges();
+        document.getSelection().addRange(selected);
+      }
     },
   },
 };
