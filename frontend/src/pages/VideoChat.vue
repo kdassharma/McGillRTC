@@ -401,6 +401,19 @@ export default {
 
       console.log("Stream:", document.querySelector("#localVideo").srcObject);
     },
+    closeUserMedia: async function() {
+      this.isMediaOpen = false;
+
+      this.localStream.getTracks().forEach(function(track) {
+        track.stop();
+      });
+
+      document.querySelector("#localVideo").srcObject = undefined;
+      this.localStream = undefined;
+
+      this.remoteStream = undefined;
+      document.querySelector("#remoteVideo").srcObject = undefined;
+    },
     hangUp: async function() {
       const tracks = document
         .querySelector("#localVideo")
@@ -442,6 +455,7 @@ export default {
 
       this.isInRoom = false;
       this.isMediaOpen = false;
+      this.closeUserMedia();
     },
     registerPeerConnectionListeners: function() {
       this.peerConnection.addEventListener("icegatheringstatechange", () => {
@@ -483,6 +497,7 @@ export default {
     signOut: async function() {
       await this.$store.dispatch("logout");
       this.$router.push({ name: "Home" });
+      this.closeUserMedia();
     },
     copyRoomId() {
       var Url =
