@@ -30,9 +30,9 @@
             class="mx-2"
             variant="warning"
             :disabled="!isMediaOpen"
-            v-on:click="createRoom"
+            v-on:click="showScheduleModal"
             v-if="!isInRoom"
-            >Create Room</b-button
+            >Schedule</b-button
           >
           <b-button
             pill
@@ -100,6 +100,27 @@
           </b-row>
         </b-modal>
       </b-row>
+      <!-- Schedule modal -->
+      <b-row>
+        <b-modal ref="schedule-modal" hide-footer title="Schedule Time">
+          <b-row>
+            <b-col class="col-10 pr-0">
+              <b-form-input
+                v-model="scheduledTime"
+                placeholder="Select a time in HH:MM format"
+              ></b-form-input>
+            </b-col>
+            <b-col class="col-2">
+              <b-button
+                pill
+                variant="primary"
+                v-on:click="schedule(scheduledTime)"
+                >Schedule!</b-button
+              >
+            </b-col>
+          </b-row>
+        </b-modal>
+      </b-row>
     </b-container>
   </div>
 </template>
@@ -130,6 +151,7 @@ export default {
       roomId: null,
       isInRoom: false,
       isMediaOpen: false,
+      scheduledTime: null,
     };
   },
   methods: {
@@ -175,6 +197,8 @@ export default {
       await roomRef.set(roomWithOffer);
 
       this.roomId = roomRef.id;
+      await db.collection('users').doc(this.$store.getters.getUser.id).set({room: roomRef.id}, { merge: true });
+
       console.log(`New room created with SDP offer. Room ID: ${roomRef.id}`);
 
       // Code for creating a room above
@@ -299,6 +323,38 @@ export default {
         // Listening for remote ICE candidates above
       }
     },
+    schedule: async function(time) {
+      
+      const usersCollection = await db.collection('users');
+
+      const snapshot = await usersCollection.where('scheduledTime', '==', time).get();
+      var match = null;
+      var found = false;
+
+      if (snapshot.empty) {
+        console.log('No users scheduled for this time.');
+        this.createRoom();
+        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:false}, { merge: true });
+      }  
+      else { 
+        snapshot.forEach(doc => {
+          if (!found && doc.id != this.$store.getters.getUser.id && !doc.data().isMatched) {
+            match = doc.data();
+            found=true;
+          }
+          console.log(match.room);
+          // console.log(doc.id, '=>', doc.data());
+        });
+
+        await usersCollection.doc(match.id).set({isMatched:true}, { merge: true });
+        await usersCollection.doc(this.$store.getters.getUser.id).set({isMatched:true}, { merge: true });
+      }
+
+      await usersCollection.doc(this.$store.getters.getUser.id).set({scheduledTime: time}, { merge: true });
+
+      this.$refs["schedule-modal"].hide();
+
+    },
     openUserMedia: async function() {
       this.isMediaOpen = true;
 
@@ -390,6 +446,9 @@ export default {
     },
     joinRoom: function() {
       this.$refs["join-room-modal"].show();
+    },
+    showScheduleModal: function() {
+      this.$refs["schedule-modal"].show();
     },
     signOut: async function() {
       await this.$store.dispatch("logout");
