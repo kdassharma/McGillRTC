@@ -24,3 +24,25 @@ Firebase uses API keys only to identify your app's Firebase project to Firebase 
 which is done using Firebase Security Rules.
 
 API Key Restrictions: https://cloud.google.com/docs/authentication/api-keys#api_key_restrictions
+
+Our API credentials and restrictions (need to remove localhost for production):
+https://console.cloud.google.com/apis/credentials?project=mcgillrtc-474ff&folder=&organizationId=
+
+# Security Rules
+
+When you set up Cloud Firestore, Realtime Database, and Cloud Storage, intitialize your security rules to deny all access by default, and add rules that grant access to specific resources as you develop your app.
+
+Conditions:
+https://firebase.google.com/docs/firestore/security/rules-conditions
+
+Rules guide:
+https://howtofirebase.com/firebase-security-rules-88d94606ce4a
+https://www.fullstackfirebase.com/cloud-firestore/security-rules
+
+Templates:
+https://medium.com/@juliomacr/10-firebase-realtime-database-rule-templates-d4894a118a98
+https://gist.github.com/codediodeio/6dbce1305b9556c2136492522e2100f6
+
+# Authentication
+
+Email-password authentication: set tight quota for the sign-in endpoint to prevent brute force attacks If you use Firebase's managed email-password authentication service, tighten the default quota of the identitytoolkit.googleapis.com endpoints to prevent brute force attacks. You can do so from the API's page in the Google Cloud Console.
