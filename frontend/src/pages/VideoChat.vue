@@ -71,20 +71,35 @@
           id="videos"
           v-if="isMediaOpen"
         >
-          <video
-            id="localVideo"
-            class="d-flex mr-5 h-100 w-50"
-            muted
-            autoplay
-            playsinline
-          ></video>
-          <video
-            id="remoteVideo"
-            :class="{ 'd-flex': isInRoom, 'd-none': !isInRoom }"
-            class="ml-5 h-100 w-50"
-            autoplay
-            playsinline
-          ></video>
+          <b-container class="position-relative">
+            <video
+              id="localVideo"
+              class="mr-5 h-100 w-100"
+              muted
+              autoplay
+              playsinline
+            ></video>
+            <!-- Mute Controls -->
+            <b-button-group class="position-absolute text-center d-block controls">
+              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteMic">
+                <b-icon variant="dark" icon="mic" v-if="!isMicMuted"></b-icon>
+                <b-icon variant="dark" icon="mic-mute-fill" v-if="isMicMuted"></b-icon>
+              </b-button>
+              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteVideo">
+                <b-icon variant="dark" icon="camera-video" v-if="!isVideoMuted"></b-icon>
+                <b-icon variant="dark" icon="camera-video-off-fill" v-if="isVideoMuted"></b-icon>
+              </b-button>            
+            </b-button-group>      
+          </b-container>
+          <b-container class="position-relative">
+            <video
+              id="remoteVideo"
+              :class="{ 'd-flex': isInRoom, 'd-none': !isInRoom }"
+              class="ml-5 h-100 w-100"
+              autoplay
+              playsinline
+            ></video>
+          </b-container>
         </div>
       </b-row>
       <!-- Join Room Modal -->
@@ -160,6 +175,8 @@ export default {
       isInRoom: false,
       isMediaOpen: false,
       scheduledTime: null,
+      isMicMuted: false,
+      isVideoMuted: false,
     };
   },
   mounted: function() {
@@ -415,6 +432,9 @@ export default {
       document.querySelector("#remoteVideo").srcObject = undefined;
     },
     hangUp: async function() {
+      this.isInRoom = false;
+      this.isMediaOpen = false;
+
       const tracks = document
         .querySelector("#localVideo")
         .srcObject.getTracks();
@@ -453,8 +473,6 @@ export default {
         this.roomId = "";
       }
 
-      this.isInRoom = false;
-      this.isMediaOpen = false;
       this.closeUserMedia();
     },
     registerPeerConnectionListeners: function() {
@@ -499,6 +517,14 @@ export default {
       this.$router.push({ name: "Home" });
       this.closeUserMedia();
     },
+    muteMic: function() {
+      this.isMicMuted = !this.isMicMuted;
+      this.localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+    },    
+    muteVideo: function() {
+      this.isVideoMuted = !this.isVideoMuted;
+      this.localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+    },      
     copyRoomId() {
       var Url =
         window.location.origin + this.$route.path + "?id=" + this.roomId;
@@ -528,5 +554,8 @@ export default {
 button:disabled {
   cursor: not-allowed;
   pointer-events: all !important;
+}
+.controls {
+  top: 5px;
 }
 </style>
