@@ -79,6 +79,16 @@
               autoplay
               playsinline
             ></video>
+            
+            <!-- Fix this card here to some into message // Double check if user is on left side in both cases // Change to only go on temporarily when partner joins -->
+            <div v-if="hasPartnerJoined" class="position-absolute text-center d-block controls">
+                  <b-card img-src="https://placekitten.com/300/300" img-alt="Card image" img-right>
+                  <b-card-text>
+                    Some quick example text to build on the card and make up the bulk of the card's content.
+                  </b-card-text>
+                </b-card>
+            </div>            
+            
             <!-- Mute Controls -->
             <b-button-group class="position-absolute text-center d-block controls">
               <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteMic">
@@ -177,6 +187,8 @@ export default {
       scheduledTime: null,
       isMicMuted: false,
       isVideoMuted: false,
+      hasPartnerJoined: false,
+      test: false
     };
   },
   mounted: function() {
@@ -358,6 +370,13 @@ export default {
         // Listening for remote ICE candidates above
       }
     },
+    partnerJoined: function() {
+      // Ensures it is only run once
+      if (!this.hasPartnerJoined) {
+        console.log("Partner joined!")
+        this.test = true;
+      }
+    },
     schedule: async function(time) {
       const usersCollection = await db.collection("users");
 
@@ -485,6 +504,11 @@ export default {
         console.log(
           `Connection state change: ${this.peerConnection.connectionState}`
         );
+
+        if (this.peerConnection.connectionState == "connected") { 
+          this.partnerJoined();
+          this.hasPartnerJoined = true; 
+        }
 
         if (
           ["disconnected", "failed"].includes(
