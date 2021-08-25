@@ -88,7 +88,11 @@
               <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteVideo">
                 <b-icon variant="dark" icon="camera-video" v-if="!isVideoMuted"></b-icon>
                 <b-icon variant="dark" icon="camera-video-off-fill" v-if="isVideoMuted"></b-icon>
-              </b-button>            
+              </b-button>      
+              <b-button class="shadow-none border-0 bg-transparent" v-on:click="shareScreen">
+                <b-icon variant="dark" icon="display" v-if="!isShared"></b-icon>
+                <b-icon variant="dark" icon="display-fill" v-if="isShared"></b-icon>
+              </b-button>       
             </b-button-group>      
           </b-container>
           <b-container class="position-relative">
@@ -525,7 +529,29 @@ export default {
       this.isVideoMuted = !this.isVideoMuted;
       this.localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
     },      
-    copyRoomId() {
+    shareScreen: async function() {
+      // navigator.mediaDevices.getDisplayMedia({cursor: true}).then(stream => { 
+      //       const screenTrack = stream.getTracks()[0];
+      //       this.peerConnection.find(sender => sender.track.kind === 'video').replaceTrack(screenTrack);
+      //       screenTrack.onended = function() {
+      //           this.peerConnection.find(sender => sender.track.kind === "video").replaceTrack(this.localStream.getTracks()[1]);
+      //       }
+      //   })
+      navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
+        this.localStream = stream;
+        let videoTrack = this.localStream.getVideoTracks()[0];
+        // videoTrack.onended = () => {
+        //     stopScreenSharing()
+        // }
+        let sender = this.peerConnection.getSenders().find(function (s) {
+            return s.track.kind == videoTrack.kind;
+        })
+        sender.replaceTrack(videoTrack)
+        // screenSharing = true
+        // console.log(screenStream)
+      })
+    },
+    copyRoomId: function() {
       var Url =
         window.location.origin + this.$route.path + "?id=" + this.roomId;
       const el = document.createElement("textarea");
