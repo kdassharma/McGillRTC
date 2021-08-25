@@ -124,6 +124,17 @@
                   v-if="isVideoMuted"
                 ></b-icon>
               </b-button>
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="shareScreen"
+              >
+                <b-icon variant="dark" icon="display" v-if="!isShared"></b-icon>
+                <b-icon
+                  variant="dark"
+                  icon="display-fill"
+                  v-if="isShared"
+                ></b-icon>
+              </b-button>
             </b-button-group>
           </b-container>
           <b-container class="position-relative">
@@ -585,7 +596,17 @@ export default {
         .getVideoTracks()
         .forEach((track) => (track.enabled = !track.enabled));
     },
-    copyRoomId() {
+    shareScreen: async function() {
+      navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
+        this.localStream = stream;
+        let videoTrack = this.localStream.getVideoTracks()[0];
+        let sender = this.peerConnection.getSenders().find(function(s) {
+          return s.track.kind == videoTrack.kind;
+        });
+        sender.replaceTrack(videoTrack);
+      });
+    },
+    copyRoomId: function() {
       var Url =
         window.location.origin + this.$route.path + "?id=" + this.roomId;
       const el = document.createElement("textarea");
