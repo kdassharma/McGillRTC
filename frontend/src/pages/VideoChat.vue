@@ -80,20 +80,47 @@
               playsinline
             ></video>
             <!-- Mute Controls -->
-            <b-button-group class="position-absolute text-center d-block controls">
-              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteMic">
+            <b-button-group
+              class="position-absolute text-center d-block controls"
+            >
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="muteMic"
+              >
                 <b-icon variant="dark" icon="mic" v-if="!isMicMuted"></b-icon>
-                <b-icon variant="dark" icon="mic-mute-fill" v-if="isMicMuted"></b-icon>
+                <b-icon
+                  variant="dark"
+                  icon="mic-mute-fill"
+                  v-if="isMicMuted"
+                ></b-icon>
               </b-button>
-              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteVideo">
-                <b-icon variant="dark" icon="camera-video" v-if="!isVideoMuted"></b-icon>
-                <b-icon variant="dark" icon="camera-video-off-fill" v-if="isVideoMuted"></b-icon>
-              </b-button>      
-              <b-button class="shadow-none border-0 bg-transparent" v-on:click="shareScreen">
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="muteVideo"
+              >
+                <b-icon
+                  variant="dark"
+                  icon="camera-video"
+                  v-if="!isVideoMuted"
+                ></b-icon>
+                <b-icon
+                  variant="dark"
+                  icon="camera-video-off-fill"
+                  v-if="isVideoMuted"
+                ></b-icon>
+              </b-button>
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="shareScreen"
+              >
                 <b-icon variant="dark" icon="display" v-if="!isShared"></b-icon>
-                <b-icon variant="dark" icon="display-fill" v-if="isShared"></b-icon>
-              </b-button>       
-            </b-button-group>      
+                <b-icon
+                  variant="dark"
+                  icon="display-fill"
+                  v-if="isShared"
+                ></b-icon>
+              </b-button>
+            </b-button-group>
           </b-container>
           <b-container class="position-relative">
             <video
@@ -523,33 +550,25 @@ export default {
     },
     muteMic: function() {
       this.isMicMuted = !this.isMicMuted;
-      this.localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
-    },    
+      this.localStream
+        .getAudioTracks()
+        .forEach((track) => (track.enabled = !track.enabled));
+    },
     muteVideo: function() {
       this.isVideoMuted = !this.isVideoMuted;
-      this.localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
-    },      
+      this.localStream
+        .getVideoTracks()
+        .forEach((track) => (track.enabled = !track.enabled));
+    },
     shareScreen: async function() {
-      // navigator.mediaDevices.getDisplayMedia({cursor: true}).then(stream => { 
-      //       const screenTrack = stream.getTracks()[0];
-      //       this.peerConnection.find(sender => sender.track.kind === 'video').replaceTrack(screenTrack);
-      //       screenTrack.onended = function() {
-      //           this.peerConnection.find(sender => sender.track.kind === "video").replaceTrack(this.localStream.getTracks()[1]);
-      //       }
-      //   })
       navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
         this.localStream = stream;
         let videoTrack = this.localStream.getVideoTracks()[0];
-        // videoTrack.onended = () => {
-        //     stopScreenSharing()
-        // }
-        let sender = this.peerConnection.getSenders().find(function (s) {
-            return s.track.kind == videoTrack.kind;
-        })
-        sender.replaceTrack(videoTrack)
-        // screenSharing = true
-        // console.log(screenStream)
-      })
+        let sender = this.peerConnection.getSenders().find(function(s) {
+          return s.track.kind == videoTrack.kind;
+        });
+        sender.replaceTrack(videoTrack);
+      });
     },
     copyRoomId: function() {
       var Url =
