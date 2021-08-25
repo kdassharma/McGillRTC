@@ -79,27 +79,52 @@
               autoplay
               playsinline
             ></video>
-            
-            <!-- Fix this card here to some into message // Double check if user is on left side in both cases // Change to only go on temporarily when partner joins -->
-            <div v-if="hasPartnerJoined" class="position-absolute text-center d-block controls">
-                  <b-card img-src="https://placekitten.com/300/300" img-alt="Card image" img-right>
-                  <b-card-text>
-                    Some quick example text to build on the card and make up the bulk of the card's content.
-                  </b-card-text>
-                </b-card>
-            </div>            
-            
+
+            <div
+              v-if="showIntroOverlay"
+              class="position-absolute text-center d-block controls mr-3 mt-5"
+            >
+              <b-card class="mx-3 bg-secondary">
+                <b-card-text class="mx-5">
+                  Welcome! 👋 <br /><br />
+                  Please introduce yourself and let your buddy know what you are
+                  working on.
+                </b-card-text>
+              </b-card>
+            </div>
+
             <!-- Mute Controls -->
-            <b-button-group class="position-absolute text-center d-block controls">
-              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteMic">
+            <b-button-group
+              class="position-absolute text-center d-block controls"
+              v-if="showControls"
+            >
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="muteMic"
+              >
                 <b-icon variant="dark" icon="mic" v-if="!isMicMuted"></b-icon>
-                <b-icon variant="dark" icon="mic-mute-fill" v-if="isMicMuted"></b-icon>
+                <b-icon
+                  variant="dark"
+                  icon="mic-mute-fill"
+                  v-if="isMicMuted"
+                ></b-icon>
               </b-button>
-              <b-button class="shadow-none border-0 bg-transparent" v-on:click="muteVideo">
-                <b-icon variant="dark" icon="camera-video" v-if="!isVideoMuted"></b-icon>
-                <b-icon variant="dark" icon="camera-video-off-fill" v-if="isVideoMuted"></b-icon>
-              </b-button>            
-            </b-button-group>      
+              <b-button
+                class="shadow-none border-0 bg-transparent"
+                v-on:click="muteVideo"
+              >
+                <b-icon
+                  variant="dark"
+                  icon="camera-video"
+                  v-if="!isVideoMuted"
+                ></b-icon>
+                <b-icon
+                  variant="dark"
+                  icon="camera-video-off-fill"
+                  v-if="isVideoMuted"
+                ></b-icon>
+              </b-button>
+            </b-button-group>
           </b-container>
           <b-container class="position-relative">
             <video
@@ -188,13 +213,14 @@ export default {
       isMicMuted: false,
       isVideoMuted: false,
       hasPartnerJoined: false,
-      test: false
+      showControls: false,
+      showIntroOverlay: false,
     };
   },
-  mounted: function() {
+  mounted: async function() {
     let roomId = this.$route.query.id;
     if (roomId) {
-      this.openUserMedia();
+      await this.openUserMedia();
       this.joinRoomById(roomId);
     }
   },
@@ -373,8 +399,12 @@ export default {
     partnerJoined: function() {
       // Ensures it is only run once
       if (!this.hasPartnerJoined) {
-        console.log("Partner joined!")
-        this.test = true;
+        console.log("Partner joined!");
+        this.showControls = true;
+        this.showIntroOverlay = true;
+        setTimeout(() => {
+          this.showIntroOverlay = false;
+        }, 5000);
       }
     },
     schedule: async function(time) {
@@ -440,27 +470,30 @@ export default {
     closeUserMedia: async function() {
       this.isMediaOpen = false;
 
-      this.localStream.getTracks().forEach(function(track) {
-        track.stop();
-      });
+      if (this.localStream) {
+        this.localStream.getTracks().forEach(function(track) {
+          track.stop();
+        });
+      }
 
-      document.querySelector("#localVideo").srcObject = undefined;
+      if (document.querySelector("#localVideo")) {
+        document.querySelector("#localVideo").srcObject = undefined;
+      }
       this.localStream = undefined;
 
       this.remoteStream = undefined;
-      document.querySelector("#remoteVideo").srcObject = undefined;
+      if (document.querySelector("#remoteVideo")) {
+        document.querySelector("#remoteVideo").srcObject = undefined;
+      }
     },
     hangUp: async function() {
       this.isInRoom = false;
       this.isMediaOpen = false;
+      this.showControls = false;
 
-      const tracks = document
-        .querySelector("#localVideo")
-        .srcObject.getTracks();
-
-      tracks.forEach((track) => {
-        track.stop();
-      });
+      if (this.localStream) {
+        this.remoteStream.getTracks().forEach((track) => track.stop());
+      }
 
       if (this.remoteStream) {
         this.remoteStream.getTracks().forEach((track) => track.stop());
@@ -505,17 +538,16 @@ export default {
           `Connection state change: ${this.peerConnection.connectionState}`
         );
 
-        if (this.peerConnection.connectionState == "connected") { 
+        if (this.peerConnection.connectionState == "connected") {
           this.partnerJoined();
-          this.hasPartnerJoined = true; 
-        }
-
-        if (
+          this.hasPartnerJoined = true;
+        } else if (
           ["disconnected", "failed"].includes(
             this.peerConnection.connectionState
           )
-        )
-          this.isInRoom = false;
+        ) {
+          this.hangUp();
+        }
       });
 
       this.peerConnection.addEventListener("signalingstatechange", () => {
@@ -543,12 +575,16 @@ export default {
     },
     muteMic: function() {
       this.isMicMuted = !this.isMicMuted;
-      this.localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
-    },    
+      this.localStream
+        .getAudioTracks()
+        .forEach((track) => (track.enabled = !track.enabled));
+    },
     muteVideo: function() {
       this.isVideoMuted = !this.isVideoMuted;
-      this.localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
-    },      
+      this.localStream
+        .getVideoTracks()
+        .forEach((track) => (track.enabled = !track.enabled));
+    },
     copyRoomId() {
       var Url =
         window.location.origin + this.$route.path + "?id=" + this.roomId;
