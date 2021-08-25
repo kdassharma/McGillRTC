@@ -79,9 +79,24 @@
               autoplay
               playsinline
             ></video>
+
+            <div
+              v-if="showIntroOverlay"
+              class="position-absolute text-center d-block controls mr-3 mt-5"
+            >
+              <b-card class="mx-3 bg-secondary">
+                <b-card-text class="mx-5">
+                  Welcome! 👋 <br /><br />
+                  Please introduce yourself and let your buddy know what you are
+                  working on.
+                </b-card-text>
+              </b-card>
+            </div>
+
             <!-- Mute Controls -->
             <b-button-group
               class="position-absolute text-center d-block controls"
+              v-if="showControls"
             >
               <b-button
                 class="shadow-none border-0 bg-transparent"
@@ -208,12 +223,15 @@ export default {
       scheduledTime: null,
       isMicMuted: false,
       isVideoMuted: false,
+      hasPartnerJoined: false,
+      showControls: false,
+      showIntroOverlay: false,
     };
   },
-  mounted: function() {
+  mounted: async function() {
     let roomId = this.$route.query.id;
     if (roomId) {
-      this.openUserMedia();
+      await this.openUserMedia();
       this.joinRoomById(roomId);
     }
   },
@@ -389,6 +407,17 @@ export default {
         // Listening for remote ICE candidates above
       }
     },
+    partnerJoined: function() {
+      // Ensures it is only run once
+      if (!this.hasPartnerJoined) {
+        console.log("Partner joined!");
+        this.showControls = true;
+        this.showIntroOverlay = true;
+        setTimeout(() => {
+          this.showIntroOverlay = false;
+        }, 5000);
+      }
+    },
     schedule: async function(time) {
       const usersCollection = await db.collection("users");
 
@@ -452,27 +481,30 @@ export default {
     closeUserMedia: async function() {
       this.isMediaOpen = false;
 
-      this.localStream.getTracks().forEach(function(track) {
-        track.stop();
-      });
+      if (this.localStream) {
+        this.localStream.getTracks().forEach(function(track) {
+          track.stop();
+        });
+      }
 
-      document.querySelector("#localVideo").srcObject = undefined;
+      if (document.querySelector("#localVideo")) {
+        document.querySelector("#localVideo").srcObject = undefined;
+      }
       this.localStream = undefined;
 
       this.remoteStream = undefined;
-      document.querySelector("#remoteVideo").srcObject = undefined;
+      if (document.querySelector("#remoteVideo")) {
+        document.querySelector("#remoteVideo").srcObject = undefined;
+      }
     },
     hangUp: async function() {
       this.isInRoom = false;
       this.isMediaOpen = false;
+      this.showControls = false;
 
-      const tracks = document
-        .querySelector("#localVideo")
-        .srcObject.getTracks();
-
-      tracks.forEach((track) => {
-        track.stop();
-      });
+      if (this.localStream) {
+        this.remoteStream.getTracks().forEach((track) => track.stop());
+      }
 
       if (this.remoteStream) {
         this.remoteStream.getTracks().forEach((track) => track.stop());
@@ -517,12 +549,16 @@ export default {
           `Connection state change: ${this.peerConnection.connectionState}`
         );
 
-        if (
+        if (this.peerConnection.connectionState == "connected") {
+          this.partnerJoined();
+          this.hasPartnerJoined = true;
+        } else if (
           ["disconnected", "failed"].includes(
             this.peerConnection.connectionState
           )
-        )
-          this.isInRoom = false;
+        ) {
+          this.hangUp();
+        }
       });
 
       this.peerConnection.addEventListener("signalingstatechange", () => {
