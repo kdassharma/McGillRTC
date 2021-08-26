@@ -226,6 +226,7 @@ export default {
       hasPartnerJoined: false,
       showControls: false,
       showIntroOverlay: false,
+      isShared: false,
     };
   },
   mounted: async function() {
@@ -597,6 +598,10 @@ export default {
         .forEach((track) => (track.enabled = !track.enabled));
     },
     shareScreen: async function() {
+      if (this.isShared) {
+        this.stopScreenShare()
+        return;
+      }
       navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
         this.localStream = stream;
         let videoTrack = this.localStream.getVideoTracks()[0];
@@ -605,6 +610,21 @@ export default {
         });
         sender.replaceTrack(videoTrack);
       });
+      this.isShared= true;
+    },
+    stopScreenShare: async function() {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      this.localStream = stream;
+
+      let videoTrack = this.localStream.getVideoTracks()[0];
+      let sender = this.peerConnection.getSenders().find(function (s) {
+          return s.track.kind == videoTrack.kind;
+      })
+      sender.replaceTrack(videoTrack)
+      this.isShared = false;
     },
     copyRoomId: function() {
       var Url =
