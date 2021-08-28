@@ -30,18 +30,18 @@
             class="mx-2"
             variant="warning"
             :disabled="!isMediaOpen"
-            v-on:click="showScheduleModal"
+            v-on:click="createRoom('private')"
             v-if="!isInRoom"
-            >Schedule</b-button
+            >Create Room</b-button
           >
           <b-button
             pill
             class="mx-2"
             variant="warning"
             :disabled="!isMediaOpen"
-            v-on:click="joinRoom"
+            v-on:click="showPairRandomModal"
             v-if="!isInRoom"
-            >Join Room</b-button
+            >Pair Random!</b-button
           >
           <b-button
             pill
@@ -79,7 +79,7 @@
               autoplay
               playsinline
             ></video>
-
+            <!-- Intro Overlay -->
             <div
               v-if="showIntroOverlay"
               class="position-absolute text-center d-block controls mr-3 mt-5"
@@ -92,7 +92,6 @@
                 </b-card-text>
               </b-card>
             </div>
-
             <!-- Mute Controls -->
             <b-button-group
               class="position-absolute text-center d-block controls"
@@ -148,44 +147,39 @@
           </b-container>
         </div>
       </b-row>
-      <!-- Join Room Modal -->
+      <!-- Pair Random Modal -->
       <b-row>
-        <b-modal ref="join-room-modal" hide-footer title="Join Room">
-          <b-row>
-            <b-col class="col-10 pr-0">
-              <b-form-input
-                v-model="typedRoomId"
-                placeholder="Paste Room ID"
-              ></b-form-input>
-            </b-col>
-            <b-col class="col-2">
+        <b-modal ref="pair-random-modal" hide-footer title="Select Session Type" size="sm">
+          <b-row class="text-center">
+            <b-col>
               <b-button
-                pill
-                variant="primary"
-                v-on:click="joinRoomById(typedRoomId)"
-                >Join!</b-button
+                variant="secondary"
+                size="lg"
+                class="w-50"
+                v-on:click="pairRandom('study')"
+                >
+                <b-icon icon="book"></b-icon>
+              </b-button
+              >
+            </b-col>
+            <b-col>
+              <b-button
+                variant="secondary"
+                size="lg"
+                class="w-50"
+                v-on:click="pairRandom('chat')"
+                >
+                <b-icon icon="chat"></b-icon>
+              </b-button
               >
             </b-col>
           </b-row>
-        </b-modal>
-      </b-row>
-      <!-- Schedule modal -->
-      <b-row>
-        <b-modal ref="schedule-modal" hide-footer title="Schedule Time">
-          <b-row>
-            <b-col class="col-10 pr-0">
-              <b-form-input
-                v-model="scheduledTime"
-                placeholder="Select a time in HH:MM format"
-              ></b-form-input>
+          <b-row class="text-center center mt-2">
+            <b-col>
+              Study Session
             </b-col>
-            <b-col class="col-2">
-              <b-button
-                pill
-                variant="primary"
-                v-on:click="schedule(scheduledTime)"
-                >Schedule!</b-button
-              >
+            <b-col>
+              Just Chillin'
             </b-col>
           </b-row>
         </b-modal>
@@ -215,12 +209,9 @@ export default {
       peerConnection: null,
       localStream: null,
       remoteStream: null,
-      roomDialog: null,
-      typedRoomId: null,
       roomId: null,
       isInRoom: false,
       isMediaOpen: false,
-      scheduledTime: null,
       isMicMuted: false,
       isVideoMuted: false,
       hasPartnerJoined: false,
@@ -237,8 +228,8 @@ export default {
     }
   },
   methods: {
-    createRoom: async function() {
-      const roomRef = await db.collection("rooms").doc();
+    createRoom: async function(roomType) {
+      const roomRef = db.collection("rooms").doc();
 
       console.log(
         "Create this.peerConnection with configuration: ",
@@ -252,7 +243,7 @@ export default {
         this.peerConnection.addTrack(track, this.localStream);
       });
 
-      // Code for collecting ICE candidates below
+      // Collecting ICE candidates 
       const callerCandidatesCollection = roomRef.collection("callerCandidates");
 
       this.peerConnection.addEventListener("icecandidate", (event) => {
@@ -263,9 +254,8 @@ export default {
         console.log("Got candidate: ", event.candidate);
         callerCandidatesCollection.add(event.candidate.toJSON());
       });
-      // Code for collecting ICE candidates above
 
-      // Code for creating a room below
+      // Creating a room
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
       console.log("Created offer:", offer);
@@ -275,9 +265,11 @@ export default {
           type: offer.type,
           sdp: offer.sdp,
         },
+        type: roomType,
+        ongoing: false
       };
       await roomRef.set(roomWithOffer);
-
+      
       this.roomId = roomRef.id;
       await db
         .collection("users")
@@ -286,7 +278,6 @@ export default {
 
       console.log(`New room created with SDP offer. Room ID: ${roomRef.id}`);
 
-      // Code for creating a room above
       this.peerConnection.addEventListener("track", (event) => {
         console.log("Got remote track:", event.streams[0]);
         event.streams[0].getTracks().forEach((track) => {
@@ -295,7 +286,7 @@ export default {
         });
       });
 
-      // Listening for remote session description below
+      // Listening for remote session description
       roomRef.onSnapshot(async (snapshot) => {
         const data = snapshot.data();
         if (
@@ -308,9 +299,8 @@ export default {
           await this.peerConnection.setRemoteDescription(rtcSessionDescription);
         }
       });
-      // Listening for remote session description above
 
-      // Listen for remote ICE candidates below
+      // Listen for remote ICE candidates 
       roomRef.collection("calleeCandidates").onSnapshot((snapshot) => {
         snapshot.docChanges().forEach(async (change) => {
           if (change.type === "added") {
@@ -326,11 +316,10 @@ export default {
       });
 
       this.isInRoom = true;
-      // Listen for remote ICE candidates above
     },
     joinRoomById: async function(roomId) {
       console.log("This is room id:" + roomId);
-      const roomRef = await db.collection("rooms").doc(roomId);
+      const roomRef = db.collection("rooms").doc(roomId);
       const roomSnapshot = await roomRef.get();
       console.log("Got room:", roomSnapshot.exists);
 
@@ -404,7 +393,7 @@ export default {
         this.isInRoom = true;
         this.roomId = roomId;
 
-        this.$refs["join-room-modal"].hide();
+        this.$refs["pair-random-modal"].hide();
         // Listening for remote ICE candidates above
       }
     },
@@ -419,49 +408,23 @@ export default {
         }, 5000);
       }
     },
-    schedule: async function(time) {
-      const usersCollection = await db.collection("users");
+    pairRandom: async function(sessionType) {
+      const roomsCollection = db.collection("rooms");
 
-      const snapshot = await usersCollection
-        .where("scheduledTime", "==", time)
+      const snapshot = await roomsCollection
+        .where("type", "==", sessionType)
+        .where("ongoing", "==", false)
         .get();
-      var match = null;
-      var found = false;
 
       if (snapshot.empty) {
-        console.log("No users scheduled for this time.");
-        this.createRoom();
-        await usersCollection
-          .doc(this.$store.getters.getUser.id)
-          .set({ isMatched: false }, { merge: true });
+        this.createRoom(sessionType);
+        this.$refs["pair-random-modal"].hide();
+        console.log("empty");
       } else {
-        snapshot.forEach(async (doc) => {
-          if (
-            !found &&
-            doc.id != this.$store.getters.getUser.id &&
-            !doc.data().isMatched
-          ) {
-            match = doc.data();
-            found = true;
-          }
-          if (found) {
-            console.log(match.room);
-            await usersCollection
-              .doc(match.id)
-              .set({ isMatched: true }, { merge: true });
-            await usersCollection
-              .doc(this.$store.getters.getUser.id)
-              .set({ isMatched: true }, { merge: true });
-          }
-          // console.log(doc.id, '=>', doc.data());
-        });
+        // Join first room in snapshot
+        var roomId = snapshot.docs[0].id;
+        this.joinRoomById(roomId);
       }
-
-      await usersCollection
-        .doc(this.$store.getters.getUser.id)
-        .set({ scheduledTime: time }, { merge: true });
-
-      this.$refs["schedule-modal"].hide();
     },
     openUserMedia: async function() {
       this.isMediaOpen = true;
@@ -520,7 +483,7 @@ export default {
 
       // Delete room on hangup
       if (this.roomId) {
-        const roomRef = await db.collection("rooms").doc(this.roomId);
+        const roomRef = db.collection("rooms").doc(this.roomId);
         const calleeCandidates = await roomRef
           .collection("calleeCandidates")
           .get();
@@ -549,8 +512,10 @@ export default {
         console.log(
           `Connection state change: ${this.peerConnection.connectionState}`
         );
-
+        
+        const roomRef = db.collection("rooms").doc(this.roomId);
         if (this.peerConnection.connectionState == "connected") {
+          roomRef.update({ ongoing: true });
           this.partnerJoined();
           this.hasPartnerJoined = true;
         } else if (
@@ -558,6 +523,7 @@ export default {
             this.peerConnection.connectionState
           )
         ) {
+          roomRef.update({ ongoing: false });
           this.hangUp();
         }
       });
@@ -574,8 +540,8 @@ export default {
         );
       });
     },
-    joinRoom: function() {
-      this.$refs["join-room-modal"].show();
+    showPairRandomModal: function() {
+      this.$refs["pair-random-modal"].show();
     },
     showScheduleModal: function() {
       this.$refs["schedule-modal"].show();
