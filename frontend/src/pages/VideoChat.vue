@@ -59,6 +59,14 @@
             v-on:click="hangUp"
             >Hangup</b-button
           >
+          <b-button
+            pill
+            class="ml-4"
+            variant="danger"
+            v-if="isInRoom"
+            v-on:click="showReportUserModal"
+            >Report User</b-button
+          >
           <b-button pill class="ml-4" variant="danger" v-on:click="signOut"
             >Sign out</b-button
           >
@@ -184,6 +192,27 @@
           </b-row>
         </b-modal>
       </b-row>
+      <!-- Report user modal -->
+      <b-row>
+        <b-modal ref="report-user-modal" hide-footer title="Report User">
+          <b-row>
+            <b-col class="col-10 pr-0">
+              <b-form-input
+                v-model="report"
+                placeholder="Please explain the reason for reporting the user."
+              ></b-form-input>
+            </b-col>
+            <b-col class="col-2">
+              <b-button
+                pill
+                variant="primary"
+                v-on:click="reportUser(report)"
+                >Report</b-button
+              >
+            </b-col>
+          </b-row>
+        </b-modal>
+      </b-row>
     </b-container>
   </div>
 </template>
@@ -218,6 +247,7 @@ export default {
       showControls: false,
       showIntroOverlay: false,
       isShared: false,
+      report: "",
     };
   },
   mounted: async function() {
@@ -540,11 +570,19 @@ export default {
         );
       });
     },
+    reportUser: async function(report) {
+      var reportsRef = await db.collection("reports").doc();
+
+      await reportsRef.set({
+        report: report
+      });
+      this.$refs["report-user-modal"].hide();
+    },
     showPairRandomModal: function() {
       this.$refs["pair-random-modal"].show();
     },
-    showScheduleModal: function() {
-      this.$refs["schedule-modal"].show();
+    showReportUserModal: function() {
+      this.$refs["report-user-modal"].show();
     },
     signOut: async function() {
       await this.$store.dispatch("logout");
